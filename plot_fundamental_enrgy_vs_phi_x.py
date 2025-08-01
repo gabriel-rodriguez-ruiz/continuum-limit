@@ -18,7 +18,7 @@ os.chdir(dname)
 data_folder = Path(r"./Data")
 
 # file_to_open = data_folder / "fundamental_energy_phi_x_in_(-0.01,0.01))_B=0.032_Delta_s=0_Delta_S=0.2_lambda=0_points=20_g_xx=1_g_xy=0_g_yy=1_g_yx=0_theta=1.57_points=20_phi_angle=1.57_h=0.01_w_s=2.5_w_S=0.5_E_0=-6_epsabs=1e-08.npz"
-file_to_open = data_folder / "fundamental_energy_phi_x_in_(-0.01,0.01))_B=0.016_Delta_s=0_Delta_S=0.2_lambda=0_points=20_g_xx=1_g_xy=0_g_yy=1_g_yx=0_theta=1.57_points=20_phi_angle=1.57_h=0.01_w_s=2.5_w_S=0.5_E_0=-6.npz"
+file_to_open = data_folder / "fundamental_energy_phi_x_in_(-0.1,0.1))_B=0.016_Delta_s=0_Delta_S=0.2_lambda=0_points=20_g_xx=1_g_xy=0_g_yy=1_g_yx=0_theta=1.57_points=20_phi_angle=1.57_h=0.1_w_s=2.5_w_S=0.5_E_0=-6.npz"
 
 Data = np.load(file_to_open)
 

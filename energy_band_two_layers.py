@@ -14,7 +14,7 @@ from scipy.integrate import quad, dblquad
 from scipy.optimize import root_scalar
 import time
 
-phi_x = 0
+phi_x = 0.03
 phi_y = 0
 g_xx = 1
 g_yy = 1
@@ -35,8 +35,8 @@ N_k_x = 1000
 k_x_values = np.linspace(-np.pi, np.pi, N_k_x)
 theta = np.pi/2
 phi_angle = 0   #np.pi/2
-B = 0.1  #0.032#0.004     #4*Delta_S#*Delta_S
-g_s = 2
+B = 0.03  #0.032#0.004     #4*Delta_S#*Delta_S
+g_s = 10
 g_S = 1
 B_x_S = g_S * B * np.sin(theta) * np.cos(phi_angle)
 B_y_S = g_S * B * np.sin(theta) * np.sin(phi_angle)
@@ -231,12 +231,15 @@ def find_roots(n_samples=1000, root_finding_tol=1e-8):
     return roots
 
 E_k_x = np.zeros((len(k_x_values), 8))
+E_k_x_phi_x_0 = np.zeros((len(k_x_values), 8))
 # E_4_by_4 = np.zeros((len(k_y_values), 4))
 # E_4_by_4_minus_B = np.zeros((len(k_y_values), 4))
 # E_4_by_4_analytic = np.zeros((len(k_y_values), 4))
 
 for i, k_x in enumerate(k_x_values):
     E_k_x[i, :] = np.linalg.eigvalsh(get_Hamiltonian(k_x, k_y, phi_x, phi_y, w_s, w_S, mu, Delta_s, Delta_S, B_x, B_y, B_x_S, B_y_S,
+                        Lambda, w_1, E_0))
+    E_k_x_phi_x_0[i, :] = np.linalg.eigvalsh(get_Hamiltonian(k_x, k_y, 0, phi_y, w_s, w_S, mu, Delta_s, Delta_S, B_x, B_y, B_x_S, B_y_S,
                         Lambda, w_1, E_0))
     # E_4_by_4[i, :] = np.linalg.eigvalsh(get_Hamiltonian_without_SOC(k_x, k_y, phi_x, phi_y, w_s, w_S, mu, Delta_s, Delta_S, B_s, B_S,
     #                      w_1, E_0))
@@ -249,8 +252,10 @@ fig, ax = plt.subplots()
 
 for i in range(8):
     ax.plot(k_x_values, E_k_x[:, i])
-for j in range(4):
-    ax.plot(k_x_values, -np.abs(E_k_x[:, j]), linewidth=3, linestyle="dashed")
+for i in range(4):
+    ax.plot(k_x_values, -np.abs(E_k_x[:, i]) + np.abs(E_k_x_phi_x_0[:, i]))
+# for j in range(4):
+    # ax.plot(k_x_values, -np.abs(E_k_x[:, j]), linewidth=3, linestyle="dashed")
 
 # for i in range(4):
 #     ax.plot(k_y_values, E_4_by_4[:, i],
@@ -285,7 +290,7 @@ def get_Hamiltonian_single_layer(k_x, k_y, phi_x, phi_y, w_0, mu, Delta, B_x, B_
     return H
 
 
-def integrand_for_k_y(k_y):
+def integrand_for_k_y(k_y, phi_x):
     def g(k_x):
         return np.sum(-np.abs(np.linalg.eigvalsh(get_Hamiltonian(k_x, k_y, phi_x, phi_y, w_s, w_S, mu, Delta_s, Delta_S, B_x, B_y, B_x_S, B_y_S,
                             Lambda, w_1, E_0)))[:4])
@@ -301,7 +306,7 @@ def integrand_for_k_y_single_layer(k_y):
     return integral
 
 def get_fundamental_energy():
-    return quad(integrand_for_k_y, -np.pi, np.pi)
+    return quad(integrand_for_k_y, 0, np.pi)
 
 def get_fundamental_energy_double():
     return dblquad(integrand_for_k_y, -np.pi, np.pi)
@@ -314,7 +319,46 @@ def get_fundamental_energy_double():
     
 fig, ax = plt.subplots()
 k_y_values = np.linspace(-np.pi, np.pi, 50)
-integrand = [integrand_for_k_y(k_y) for k_y in k_y_values]
+integrand = [integrand_for_k_y(k_y, phi_x) - integrand_for_k_y(k_y, 0) for k_y in k_y_values]
 ax.plot(k_y_values, integrand)
 # ax.plot(k_y_values, [integrand_for_k_y_single_layer(k_y) for k_y in k_y_values])
 ax.set_xlabel(r"$k_y$")
+
+
+#%%
+
+def find_crossings(x, y1, y2, tol=1e-1):
+    crossings = []
+    dy1 = np.sign(np.diff(y1))
+    dy2 = np.sign(np.diff(y2))
+    for i in range(len(x)-2):
+        if dy1[i+1] != dy1[i] and dy2[i+1] != dy2[i] and np.abs(y1[i]-y2[i])<tol:
+            print(i)
+            crossings.append(i)
+    return np.array(crossings)
+
+def get_unavoided_crossings(x, y1, y2, tol=1e-1):
+    crossings = find_crossings(x, y1, y2, tol=1e-1)
+    y1_new = np.copy(y1)
+    y2_new = np.copy(y2)
+    for i in range(len(crossings)//2):
+        y1_new[value+1:crossings[i+1]+1] = y2[value+1:crossings[i+1]+1]
+        y2_new[value+1:crossings[i+1]] = y1[value+1:crossings[i+1]+1]
+    return y1_new, y2_new
+
+x = k_x_values
+y1 = E_k_x[:, 1]
+y2 = E_k_x[:, 2]
+
+fig, ax = plt.subplots()
+ax.plot(x, y1)  
+ax.plot(x, y2)
+
+crossings = find_crossings(x, y1, y2)
+ax.scatter(x[crossings], y1[crossings])
+ax.scatter(x[crossings], y2[crossings])
+
+y1_new, y2_new = get_unavoided_crossings(x, y1, y2, tol=1e-1)
+ax.plot(x, y1_new)
+ax.plot(x, y2_new)
+
